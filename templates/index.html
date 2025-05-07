@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puzzle Generator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1000px;
+        }
+        .puzzle-card {
+            transition: all 0.3s ease;
+        }
+        .puzzle-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .btn-primary {
+            background-color: #4f46e5;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background-color: #10b981;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #059669;
+            transform: translateY(-2px);
+        }
+        .btn-download {
+            background-color: #2563eb;
+            transition: all 0.3s ease;
+        }
+        .btn-download:hover {
+            background-color: #1d4ed8;
+            transform: translateY(-2px);
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .hidden {
+            display: none;
+        }
+        .image-container {
+            max-width: 100%;
+            margin: 0 auto;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .image-container img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-indigo-700 mb-2">Puzzle Generator</h1>
+            <p class="text-gray-600">Enter a word or phrase to generate a unique puzzle</p>
+        </div>
+        
+        <div class="puzzle-card bg-white rounded-lg shadow-md p-6 mb-8">
+            <div class="mb-4">
+                <label for="word-input" class="block text-sm font-medium text-gray-700 mb-2">Enter word or phrase:</label>
+                <input type="text" id="word-input" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., sunshine, coffee break, blue sky">
+            </div>
+            
+            <button id="generate-puzzle-btn" class="btn-primary w-full py-2 px-4 rounded-md text-white font-medium">Generate Puzzle</button>
+            
+            <div id="loader" class="loader hidden"></div>
+            
+            <div id="puzzle-container" class="mt-6 hidden">
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Your Puzzle:</h3>
+                <div id="puzzle-text" class="bg-gray-50 p-4 rounded-md text-gray-700"></div>
+                
+                <div class="mt-4 flex justify-center">
+                    <button id="generate-image-btn" class="btn-secondary py-2 px-4 rounded-md text-white font-medium mr-2">Preview Image</button>
+                    <a id="download-image-btn" class="btn-download py-2 px-4 rounded-md text-white font-medium ml-2 text-center cursor-pointer opacity-50 pointer-events-none" disabled>Download Image</a>
+                </div>
+            </div>
+            
+            <div id="image-preview-container" class="mt-6 hidden">
+                <h3 class="text-lg font-medium text-gray-800 mb-2">Image Preview:</h3>
+                <div class="image-container rounded-md overflow-hidden">
+                    <img id="preview-image" class="border border-gray-300 w-full" alt="Puzzle preview">
+                </div>
+            </div>
+            
+            <div id="error-container" class="mt-4 hidden">
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded" role="alert">
+                    <p id="error-message"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const wordInput = document.getElementById('word-input');
+            const generatePuzzleBtn = document.getElementById('generate-puzzle-btn');
+            const generateImageBtn = document.getElementById('generate-image-btn');
+            const downloadImageBtn = document.getElementById('download-image-btn');
+            const puzzleContainer = document.getElementById('puzzle-container');
+            const puzzleText = document.getElementById('puzzle-text');
+            const imagePreviewContainer = document.getElementById('image-preview-container');
+            const previewImage = document.getElementById('preview-image');
+            const loader = document.getElementById('loader');
+            const errorContainer = document.getElementById('error-container');
+            const errorMessage = document.getElementById('error-message');
+            
+            let currentPuzzle = '';
+            
+            // Generate puzzle
+            generatePuzzleBtn.addEventListener('click', async function() {
+                const word = wordInput.value.trim();
+                
+                if (!word) {
+                    showError('Please enter a word or phrase');
+                    return;
+                }
+                
+                showLoader();
+                hideError();
+                hideImagePreview();
+                hidePuzzle();
+                
+                try {
+                    const response = await fetch('/generate-puzzle', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ word: word })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        currentPuzzle = data.puzzle;
+                        puzzleText.textContent = currentPuzzle;
+                        showPuzzle();
+                        disableDownloadButton();
+                    } else {
+                        showError(data.error || 'Failed to generate puzzle');
+                    }
+                } catch (error) {
+                    showError('An error occurred. Please try again.');
+                    console.error(error);
+                }
+                
+                hideLoader();
+            });
+            
+            // Generate image preview
+            generateImageBtn.addEventListener('click', async function() {
+                if (!currentPuzzle) {
+                    showError('Please generate a puzzle first');
+                    return;
+                }
+                
+                showLoader();
+                hideError();
+                
+                try {
+                    const response = await fetch('/generate-image', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ puzzle: currentPuzzle })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        previewImage.src = 'data:image/png;base64,' + data.image;
+                        showImagePreview();
+                        enableDownloadButton();
+                    } else {
+                        showError(data.error || 'Failed to generate image');
+                    }
+                } catch (error) {
+                    showError('An error occurred. Please try again.');
+                    console.error(error);
+                }
+                
+                hideLoader();
+            });
+            
+            // Set up download button as a direct link
+            function enableDownloadButton() {
+                downloadImageBtn.href = `/download-image?puzzle=${encodeURIComponent(currentPuzzle)}`;
+                downloadImageBtn.classList.remove('opacity-50', 'pointer-events-none');
+                downloadImageBtn.removeAttribute('disabled');
+            }
+            
+            function disableDownloadButton() {
+                downloadImageBtn.href = '#';
+                downloadImageBtn.classList.add('opacity-50', 'pointer-events-none');
+                downloadImageBtn.setAttribute('disabled', 'true');
+            }
+            
+            // Enter key press to generate puzzle
+            wordInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    generatePuzzleBtn.click();
+                }
+            });
+            
+            // Utility functions
+            function showLoader() {
+                loader.classList.remove('hidden');
+            }
+            
+            function hideLoader() {
+                loader.classList.add('hidden');
+            }
+            
+            function showPuzzle() {
+                puzzleContainer.classList.remove('hidden');
+            }
+            
+            function hidePuzzle() {
+                puzzleContainer.classList.add('hidden');
+            }
+            
+            function showImagePreview() {
+                imagePreviewContainer.classList.remove('hidden');
+            }
+            
+            function hideImagePreview() {
+                imagePreviewContainer.classList.add('hidden');
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorContainer.classList.remove('hidden');
+            }
+            
+            function hideError() {
+                errorContainer.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
