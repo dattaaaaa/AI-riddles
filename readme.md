@@ -1,6 +1,6 @@
-# Puzzle Generator App
+# Riddle Generator App
 
-A simple Flask application that generates puzzles or riddles based on user input and creates downloadable images.
+A simple application that generates puzzles or riddles based on user input and creates downloadable images.
 
 ## Features
 
@@ -53,5 +53,5 @@ A simple Flask application that generates puzzles or riddles based on user input
 
 - Flask: Web framework
 - Pillow: Image processing
-- GROQ API: AI text generation
+- LLM API: AI text generation
 - TailwindCSS: Styling
